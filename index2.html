@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mot à mot</title>
+<style>
+:root{--bg:#1f3a34;--panel:#27483f;--chalk:#f4f1e6;--dim:#a9bdb4;--yellow:#ffd95a;--red:#ff8a80;--line:#4f7468;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#16292a;--panel:#1d3636;--line:#41655d}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--chalk);font-family:"Chalkboard SE","Marker Felt","Comic Neue","Comic Sans MS",cursive,sans-serif}
+main{max-width:460px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+h1{margin:0;font-size:28px;font-weight:700}
+.bar{display:flex;justify-content:space-between;color:var(--dim);font-size:15px}
+.arrow{color:var(--dim);font-size:17px}
+.goal{background:var(--panel);border:2px dashed var(--line);border-radius:12px;padding:12px;font-size:19px;line-height:1.4}
+.goal b{color:var(--yellow);letter-spacing:3px;text-transform:uppercase}
+#ladder{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 0}
+.row{display:flex;gap:7px}
+.t{width:var(--s,54px);height:var(--s,54px);border:2.5px solid var(--chalk);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:calc(var(--s,54px)*.55);text-transform:uppercase}
+.t.ch{background:var(--yellow);border-color:var(--yellow);color:#1f3a34}
+.t.tg{border-style:dashed;border-color:var(--yellow);color:var(--yellow)}
+.t.ok{background:#7fd6a0;border-color:#7fd6a0;color:#1f3a34}
+.rung{width:70px;height:12px;border-left:3px solid var(--line);border-right:3px solid var(--line)}
+form{display:flex;gap:8px}
+input{flex:1;min-width:0;font:inherit;font-size:26px;text-transform:uppercase;letter-spacing:8px;text-align:center;background:transparent;color:var(--chalk);border:2.5px solid var(--yellow);border-radius:10px;padding:8px}
+input:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+button{font:inherit;font-size:18px;font-weight:700;color:var(--chalk);background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer}
+button.main{background:var(--yellow);border-color:var(--yellow);color:#1f3a34}
+.acts{display:flex;gap:8px}.acts button{flex:1}
+#msg{min-height:24px;text-align:center;font-size:17px;color:var(--red)}
+#msg.good{color:var(--yellow)}
+</style>
+</head>
+<body>
+<main>
+<h1>Mot à mot</h1>
+<div class="bar"><span id="lv"></span><span id="mv"></span></div>
+<div id="ladder"></div>
+<form id="f" autocomplete="off"><input id="in" maxlength="16" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Ton mot" placeholder="····"><button class="main" id="ok">OK</button></form>
+<div id="msg" role="status"></div>
+<div class="acts"><button id="hint" type="button">Indice</button><button id="undo" type="button">Annuler</button><button id="skip" type="button">Autre mot</button></div>
+<p class="bar" style="line-height:1.4">À chaque étape, change, ajoute ou enlève une lettre. Le mot doit exister en français (accents permis). Essais illimités.</p>
+</main>
+<script>
+const W=`aide aile aime aire anse aube base bave beau bise bleu bois bond bord bout boue bouc bras brin bris bain banc bang cage cale came cane cape care cave cent cerf chat chez cher cime cire cite clef clou code coin cote coup cour cure cuve cube dame dans date dent dire dive dome dont dose dune dupe face fade fait fard fier file fils fine fixe flan flou foie foin fois fond font fort four frit fuir gage gain gale gare gens gite glas gras gris gros gant gang haie hale hall hier huit iris jade joie joli jour jupe juge jury lace laid laie lame lard lave leur lien lieu lime lire lion loge loin loir long loue loup luge lune luxe mage main mais male mare mars mine mire mois mont mort mode mule mure nage nain nuit nord noir nous onde once ours oser pain pair pale pape parc part pate pays peau pile pire pion pipe plan plat plie poil pois pole pont port pose pour pris prix puce pure quai quel race raie rame rage rang rare rase rate rire rite robe rock rose roue rude ruse rien sage sain sale sang sauf saut sept sire site sole sort sous suer tard taxe tige tire toit tome tore tort tour tout trio trou tube tuer type unir urne user vase vent vers vert vide vire vite voie voix vote vous vrai zone`.split(/\s+/);
+const S=new Set(W);
+function edit1(a,b){const la=a.length,lb=b.length;if(la===lb){let d=0;for(let i=0;i<la;i++)if(a[i]!==b[i]&&++d>1)return false;return d===1}
+ if(Math.abs(la-lb)!==1)return false;const[s,l]=la<lb?[a,b]:[b,a];let i=0;while(i<s.length&&s[i]===l[i])i++;return s.slice(i)===l.slice(i+1)}
+const nb=w=>W.filter(x=>edit1(w,x));
+function bfs(s){const p={[s]:null},d={[s]:0},q=[s];for(let i=0;i<q.length;i++){const u=q[i];for(const v of nb(u))if(!(v in d)){d[v]=d[u]+1;p[v]=u;q.push(v)}}return{d,p}}
+function path(s,t){const{p}=bfs(s);if(!(t in p))return null;const r=[];let c=t;while(c){r.push(c);c=p[c]}return r.reverse()}
+const $=id=>document.getElementById(id);
+let lvl=0,start,target,par,chain,hints,won,busy=false;
+try{lvl=+localStorage.getItem('mm_lvl')||0}catch(e){}
+function newPuzzle(){
+ let want=[2,3,3,4,4,5,5,6][lvl%8];
+ for(let i=0;i<400;i++){
+  if(i&&i%100===0)want--;
+  const s=W[Math.random()*W.length|0],{d}=bfs(s),c=Object.keys(d).filter(k=>d[k]===want);
+  if(c.length){start=s;target=c[Math.random()*c.length|0];par=want;break}
+ }
+ chain=[start];hints=0;won=false;$('in').value='';say('');render();
+ try{localStorage.setItem('mm_lvl',lvl)}catch(e){}
+}
+function say(t,g){const m=$('msg');m.textContent=t;m.className=g?'good':''}
+function tiles(w,prev,cls){
+ const s=Math.min(54,Math.floor(330/Math.max(w.length,5)));
+ let h=`<div class="row" style="--s:${s}px">`;
+ for(let i=0;i<w.length;i++){
+  const ch=prev&&(prev.length===w.length?prev[i]!==w[i]:(w.length>prev.length&&i===[...w].findIndex((c,k)=>c!==prev[k])))?'ch':'';
+  h+=`<div class="t ${cls||''} ${ch}">${w[i]}</div>`}
+ return h+'</div>';
+}
+function render(){
+ const cur=chain[chain.length-1],prev=chain[chain.length-2];
+ $('lv').textContent='Niveau '+(lvl+1);
+ $('mv').textContent='Étapes : '+(chain.length-1)+' · Minimum : '+par;
+ $('ladder').innerHTML=tiles(cur,prev,won?'ok':'')+(won?'':'<div class="arrow">↓ objectif</div>'+tiles(target,null,'tg'));
+ $('f').style.display=won?'none':'flex';
+ $('hint').disabled=won;$('undo').disabled=won||chain.length<2;
+}
+const norm=s=>s.trim().toLowerCase().replace(/[^a-zàâäçéèêëîïôöùûüÿœæ]/g,'');
+async function exists(w){
+ if(S.has(w))return{ok:true};
+ try{
+  const r=await fetch('https://fr.wiktionary.org/w/api.php?action=parse&prop=sections&format=json&origin=*&page='+encodeURIComponent(w));
+  const j=await r.json();
+  if(j.error)return{ok:false};
+  return{ok:j.parse.sections.some(s=>s.anchor==='fr')};
+ }catch(e){return{ok:false,offline:true}}
+}
+$('f').addEventListener('submit',async e=>{
+ e.preventDefault();if(busy)return;
+ const w=norm($('in').value),cur=chain[chain.length-1];
+ if(w.length<2)return say('Écris un mot.');
+ if(w===cur)return say('C’est le même mot.');
+ if(!edit1(w,cur))return say('Change, ajoute ou enlève une seule lettre de '+cur.toUpperCase()+'.');
+ busy=true;$('ok').disabled=true;say('Vérification…',true);
+ const x=await exists(w);
+ busy=false;$('ok').disabled=false;
+ if(!x.ok)return say(x.offline?'Dictionnaire en ligne injoignable ici : seuls les mots de ma liste passent.':w.toUpperCase()+' n’existe pas en français. Réessaie !');
+ chain.push(w);$('in').value='';say('');
+ if(w===target)win();else render();
+});
+function win(){
+ won=true;render();
+ const extra=chain.length-1-par+hints,st=extra<=0?3:extra<=2?2:1;
+ say('Bravo ! '+'★'.repeat(st)+'☆'.repeat(3-st)+(extra<=0?' Chemin parfait.':''),true);
+ const b=document.createElement('button');b.className='main';b.textContent='Niveau suivant';
+ b.onclick=()=>{lvl++;newPuzzle()};$('ladder').appendChild(b);
+}
+$('hint').onclick=()=>{
+ const cur=chain[chain.length-1],p=path(cur,target);
+ if(!p||p.length<2)return say('Pas d’indice pour ce mot : essaie Annuler.');
+ hints++;const n=p[1];let i=0;while(i<Math.min(n.length,cur.length)&&n[i]===cur[i])i++;
+ const L=n[i]?n[i].toUpperCase():'';
+ say(n.length===cur.length?'Indice : remplace la lettre n°'+(i+1)+' par « '+L+' ».':n.length>cur.length?'Indice : ajoute « '+L+' » en position '+(i+1)+'.':'Indice : enlève la lettre n°'+(i+1)+'.',true);
+};
+$('undo').onclick=()=>{if(chain.length>1){chain.pop();say('');render()}};
+$('skip').onclick=()=>{newPuzzle()};
+newPuzzle();
+</script>
+</body>
+</html>
